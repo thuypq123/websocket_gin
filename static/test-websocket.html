@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f0f0f0;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px;
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .connecting { background: #fff3cd; }
+        .connected { background: #d1edff; }
+        .error { background: #f8d7da; }
+        .log { 
+            height: 300px; 
+            overflow-y: auto; 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            background: #f9f9f9;
+            font-family: monospace;
+        }
+        button { 
+            padding: 10px 15px; 
+            margin: 5px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        input { 
+            padding: 10px; 
+            margin: 5px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 WebSocket Connection Test</h1>
+        
+        <div id="status" class="status connecting">
+            🔄 Ready to connect...
+        </div>
+        
+        <div>
+            <input type="text" id="usernameInput" placeholder="Enter username" value="testuser">
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+        </div>
+        
+        <div>
+            <input type="text" id="roomInput" placeholder="Room name" value="general">
+            <button onclick="joinRoom()">Join Room</button>
+        </div>
+        
+        <div>
+            <input type="text" id="messageInput" placeholder="Type message">
+            <button onclick="sendMessage()">Send Message</button>
+        </div>
+        
+        <h3>📝 Connection Log:</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let username = '';
+        let currentRoom = '';
+        
+        const statusDiv = document.getElementById('status');
+        const logDiv = document.getElementById('log');
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateStatus(status, message) {
+            statusDiv.className = `status ${status}`;
+            statusDiv.innerHTML = message;
+        }
+        
+        function connect() {
+            username = document.getElementById('usernameInput').value.trim();
+            if (!username) {
+                alert('Please enter username');
+                return;
+            }
+            
+            if (ws) {
+                ws.close();
+            }
+            
+            updateStatus('connecting', '🔄 Connecting...');
+            log('🔌 Attempting to connect...');
+            
+            const wsUrl = `ws://localhost:8080/ws?username=${encodeURIComponent(username)}`;
+            log(`📡 WebSocket URL: ${wsUrl}`);
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function(event) {
+                updateStatus('connected', '✅ Connected!');
+                log('✅ WebSocket connected successfully!');
+            };
+            
+            ws.onmessage = function(event) {
+                log(`📨 Received: ${event.data}`);
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`📋 Parsed JSON: ${JSON.stringify(data, null, 2)}`);
+                } catch (e) {
+                    log(`⚠️ Could not parse as JSON: ${e.message}`);
+                }
+            };
+            
+            ws.onclose = function(event) {
+                updateStatus('error', '❌ Disconnected');
+                log(`❌ WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+            };
+            
+            ws.onerror = function(error) {
+                updateStatus('error', '⚠️ Connection Error');
+                log(`🚨 WebSocket error: ${error}`);
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                updateStatus('connecting', '🔄 Ready to connect...');
+                log('🔌 Disconnected manually');
+            }
+        }
+        
+        function joinRoom() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('❌ Not connected to WebSocket');
+                return;
+            }
+            
+            currentRoom = document.getElementById('roomInput').value.trim();
+            if (!currentRoom) {
+                alert('Please enter room name');
+                return;
+            }
+            
+            const event = {
+                type: 'JOIN_ROOM',
+                room: currentRoom,
+                user: username
+            };
+            
+            log(`🏠 Joining room: ${JSON.stringify(event)}`);
+            ws.send(JSON.stringify(event));
+        }
+        
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('❌ Not connected to WebSocket');
+                return;
+            }
+            
+            const message = document.getElementById('messageInput').value.trim();
+            if (!message) {
+                alert('Please enter message');
+                return;
+            }
+            
+            if (!currentRoom) {
+                log('❌ Please join a room first');
+                return;
+            }
+            
+            const event = {
+                type: 'CHAT_MESSAGE',
+                room: currentRoom,
+                message: message,
+                user: username
+            };
+            
+            log(`💬 Sending message: ${JSON.stringify(event)}`);
+            ws.send(JSON.stringify(event));
+            
+            document.getElementById('messageInput').value = '';
+        }
+        
+        // Auto-connect on page load for testing
+        window.addEventListener('load', function() {
+            log('🚀 Page loaded. Ready for testing!');
+        });
+    </script>
+</body>
+</html>

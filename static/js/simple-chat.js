@@ -19,24 +19,75 @@ class SimpleChatApp {
         this.messageInput = document.getElementById('messageInput');
         this.sendButton = document.getElementById('sendButton');
         this.connectionStatus = document.getElementById('connectionStatus');
+        
+        // Check for missing elements
+        const requiredElements = {
+            'usernameModal': this.usernameModal,
+            'usernameInput': this.usernameInput,
+            'usernameSubmit': this.usernameSubmit,
+            'roomSelect': this.roomSelect,
+            'messages': this.messagesDiv,
+            'messageInput': this.messageInput,
+            'sendButton': this.sendButton,
+            'connectionStatus': this.connectionStatus
+        };
+        
+        for (const [name, element] of Object.entries(requiredElements)) {
+            if (!element) {
+                console.error(`❌ Missing required element: ${name}`);
+            }
+        }
     }
 
     bindEvents() {
-        this.usernameSubmit.addEventListener('click', () => this.setUsername());
-        this.usernameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.setUsername();
-        });
+        // Username modal events
+        if (this.usernameSubmit) {
+            this.usernameSubmit.addEventListener('click', () => this.setUsername());
+        }
+        if (this.usernameInput) {
+            this.usernameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.setUsername();
+            });
+        }
         
-        this.roomSelect.addEventListener('change', (e) => this.joinRoom(e.target.value));
-        this.sendButton.addEventListener('click', () => this.sendMessage());
-        this.messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.sendMessage();
-        });
+        // Room selection
+        if (this.roomSelect) {
+            this.roomSelect.addEventListener('change', (e) => this.joinRoom(e.target.value));
+        }
+        
+        // Message form events
+        const messageForm = document.getElementById('messageForm');
+        if (messageForm) {
+            messageForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.sendMessage();
+            });
+        }
+        
+        if (this.sendButton) {
+            this.sendButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.sendMessage();
+            });
+        }
+        
+        if (this.messageInput) {
+            this.messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            });
+        }
     }
 
     requestUsername() {
-        this.usernameModal.style.display = 'flex';
-        this.usernameInput.focus();
+        if (this.usernameModal) {
+            this.usernameModal.style.display = 'flex';
+        }
+        if (this.usernameInput) {
+            this.usernameInput.focus();
+        }
     }
 
     setUsername() {
@@ -48,6 +99,13 @@ class SimpleChatApp {
         
         this.username = username;
         this.usernameModal.style.display = 'none';
+        
+        // Update username display
+        const usernameSpan = document.getElementById('username');
+        if (usernameSpan) {
+            usernameSpan.textContent = username;
+        }
+        
         this.connect();
     }
 
@@ -95,6 +153,12 @@ class SimpleChatApp {
         
         this.currentRoom = roomName;
         this.roomSelect.value = roomName;
+        
+        // Update room name display
+        const roomNameSpan = document.getElementById('roomName');
+        if (roomNameSpan) {
+            roomNameSpan.textContent = roomName;
+        }
         
         // Clear messages when switching rooms
         this.messagesDiv.innerHTML = '';

@@ -7,11 +7,25 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
+    <!-- Username Modal -->
+    <div id="usernameModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Enter Your Username</h2>
+            <input type="text" id="usernameInput" placeholder="Enter username..." autocomplete="off">
+            <button id="usernameSubmit">Join Chat</button>
+        </div>
+    </div>
+
     <div class="chat-container">
         <div class="chat-header">
             <h1>Chat Room: <span id="roomName"></span></h1>
             <div class="user-info">
                 User: <span id="username"></span>
+                <select id="roomSelect">
+                    <option value="general">General</option>
+                    <option value="tech">Tech</option>
+                    <option value="random">Random</option>
+                </select>
                 <button id="leaveBtn" class="leave-btn">Leave</button>
             </div>
         </div>
@@ -22,7 +36,7 @@
         <div class="chat-input">
             <form id="messageForm">
                 <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
-                <button type="submit">Send</button>
+                <button type="submit" id="sendButton">Send</button>
             </form>
         </div>
 
@@ -31,6 +45,6 @@
         </div>
     </div>
 
-            <script src="/static/js/simple-chat.js"></script>
+    <script src="/static/js/simple-chat-fixed.js"></script>
 </body>
 </html>
