@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="welcome-card">
+            <h1>WebSocket Chat & Comments Demo</h1>
+            <p>Experience real-time chat and comment system with WebSocket events!</p>
+            
+            <div style="margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem;">Choose Your Experience:</h3>
+                
+                <a href="/posts" class="join-btn" style="display: inline-block; text-decoration: none; margin-bottom: 1rem;">
+                    📝 Posts & Comments Demo
+                </a>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 2rem;">
+                    Create posts and comment in real-time
+                </p>
+                
+                <div style="border-top: 1px solid #e1e5e9; padding-top: 2rem;">
+                    <h3 style="margin-bottom: 1rem;">Or Join Chat Room:</h3>
+                    <form id="joinForm" class="join-form">
+                        <div class="form-group">
+                            <label for="username">Username:</label>
+                            <input type="text" id="username" name="username" required placeholder="Enter your username">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="room">Room:</label>
+                            <input type="text" id="room" name="room" placeholder="general" value="general">
+                        </div>
+                        
+                        <button type="submit" class="join-btn">Join Chat</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('joinForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const room = document.getElementById('room').value.trim() || 'general';
+            
+            if (username) {
+                // Store username in localStorage for other parts of the app
+                localStorage.setItem('username', username);
+                window.location.href = `/chat?username=${encodeURIComponent(username)}&room=${encodeURIComponent(room)}`;
+            }
+        });
+    </script>
+</body>
+</html>

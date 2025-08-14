@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .posts-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .post-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .post-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .post-meta {
+            color: #666;
+            font-size: 0.9rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .post-content {
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 1px solid #e1e5e9;
+        }
+
+        .create-post-form {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="posts-container">
+        <div class="chat-header" style="margin-bottom: 2rem;">
+            <h1>Posts & Comments Demo</h1>
+            <div>
+                <a href="/" class="btn btn-secondary">← Back to Chat</a>
+            </div>
+        </div>
+
+        <!-- Create Post Form -->
+        <div class="create-post-form">
+            <h3>Create New Post</h3>
+            <form id="createPostForm">
+                <div class="form-group">
+                    <label for="authorName">Your Name:</label>
+                    <input type="text" id="authorName" required placeholder="Enter your name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="postTitle">Post Title:</label>
+                    <input type="text" id="postTitle" required placeholder="Enter post title">
+                </div>
+                
+                <div class="form-group">
+                    <label for="postContent">Post Content:</label>
+                    <textarea id="postContent" rows="4" required placeholder="Write your post content..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Create Post</button>
+            </form>
+        </div>
+
+        <!-- Posts List -->
+        <div id="postsContainer" class="loading">
+            Loading posts...
+        </div>
+    </div>
+
+    <script>
+        class PostsApp {
+            constructor() {
+                this.posts = [];
+                this.currentUser = localStorage.getItem('username') || 'Anonymous';
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.loadPosts();
+            }
+
+            initializeElements() {
+                this.postsContainer = document.getElementById('postsContainer');
+                this.createPostForm = document.getElementById('createPostForm');
+                this.authorNameInput = document.getElementById('authorName');
+                
+                // Pre-fill author name
+                this.authorNameInput.value = this.currentUser;
+            }
+
+            setupEventListeners() {
+                this.createPostForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.createPost();
+                });
+            }
+
+            async loadPosts() {
+                try {
+                    const response = await fetch('/api/v1/posts?limit=20&offset=0');
+                    const data = await response.json();
+                    
+                    this.posts = data.posts || [];
+                    this.renderPosts();
+                } catch (error) {
+                    console.error('Failed to load posts:', error);
+                    this.postsContainer.innerHTML = '<p>Failed to load posts. Please try again.</p>';
+                }
+            }
+
+            async createPost() {
+                const title = document.getElementById('postTitle').value.trim();
+                const content = document.getElementById('postContent').value.trim();
+                const authorName = this.authorNameInput.value.trim();
+
+                if (!title || !content || !authorName) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/v1/posts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            content: content,
+                            author_id: generateId(),
+                            author_name: authorName,
+                        }),
+                    });
+
+                    if (response.ok) {
+                        // Clear form
+                        document.getElementById('postTitle').value = '';
+                        document.getElementById('postContent').value = '';
+                        
+                        // Reload posts
+                        this.loadPosts();
+                    } else {
+                        alert('Failed to create post');
+                    }
+                } catch (error) {
+                    console.error('Failed to create post:', error);
+                    alert('Failed to create post');
+                }
+            }
+
+            renderPosts() {
+                if (this.posts.length === 0) {
+                    this.postsContainer.innerHTML = '<p>No posts yet. Create the first one!</p>';
+                    return;
+                }
+
+                this.postsContainer.innerHTML = this.posts.map(post => `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <div>
+                                <div class="post-title">${this.escapeHtml(post.title)}</div>
+                                <div class="post-meta">
+                                    <span>By ${this.escapeHtml(post.author_name)}</span>
+                                    <span>${this.formatDate(post.created_at)}</span>
+                                    <span>${post.comment_count || 0} comments</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="post-content">
+                            ${this.escapeHtml(post.content)}
+                        </div>
+                        <div class="post-actions">
+                            <a href="/post/${post.id}" class="btn btn-primary">View & Comment</a>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            formatDate(dateString) {
+                return new Date(dateString).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new PostsApp();
+        });
+    </script>
+</body>
+</html>

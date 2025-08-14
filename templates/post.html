@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .post-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .post-section, .comments-section {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .comments-section {
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .post-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .post-meta {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .post-content {
+            color: #444;
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+
+        .comments-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .connection-status {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+        }
+
+        .comments-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            max-height: 400px;
+        }
+
+        .comment {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid #667eea;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .comment-time {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .comment-content {
+            color: #444;
+            line-height: 1.5;
+        }
+
+        .comment-form {
+            border-top: 1px solid #e1e5e9;
+            padding-top: 1rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-row input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .comment-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            margin-bottom: 0.5rem;
+        }
+
+        .comment-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .submit-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #666;
+            border: 1px solid #e1e5e9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .post-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="post-container">
+        <!-- Post Section -->
+        <div class="post-section">
+            <div class="chat-header" style="margin-bottom: 1.5rem;">
+                <h1>Post Details</h1>
+                <div>
+                    <a href="/posts" class="btn btn-secondary">← Back to Posts</a>
+                </div>
+            </div>
+
+            <div id="postContent" class="loading">
+                Loading post...
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="comments-section">
+            <div class="comments-header">
+                <h3>Comments</h3>
+                <div class="connection-status" id="connectionStatus">
+                    Connecting...
+                </div>
+            </div>
+
+            <div class="comments-list" id="commentsList">
+                <div class="loading">Loading comments...</div>
+            </div>
+
+            <div class="comment-form">
+                <form id="commentForm">
+                    <div class="form-row">
+                        <input type="text" id="authorName" placeholder="Your name" required>
+                    </div>
+                    <textarea id="commentInput" class="comment-input" placeholder="Write your comment..." rows="3" required></textarea>
+                    <div class="submit-row">
+                        <button type="submit" class="btn btn-primary">Post Comment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PostDetailApp {
+            constructor() {
+                this.ws = null;
+                this.postId = '{{.post_id}}';
+                this.currentUser = localStorage.getItem('username') || 'Anonymous';
+                this.userId = localStorage.getItem('userId') || this.generateId();
+                this.isConnected = false;
+
+                localStorage.setItem('userId', this.userId);
+
+                this.initializeElements();
+                this.setupEventListeners();
+                this.loadPost();
+                this.loadComments();
+                this.connectWebSocket();
+            }
+
+            initializeElements() {
+                this.postContent = document.getElementById('postContent');
+                this.commentsList = document.getElementById('commentsList');
+                this.commentForm = document.getElementById('commentForm');
+                this.commentInput = document.getElementById('commentInput');
+                this.authorNameInput = document.getElementById('authorName');
+                this.connectionStatus = document.getElementById('connectionStatus');
+
+                // Pre-fill author name
+                this.authorNameInput.value = this.currentUser;
+            }
+
+            setupEventListeners() {
+                this.commentForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.postComment();
+                });
+            }
+
+            async loadPost() {
+                try {
+                    const response = await fetch(`/api/v1/posts/${this.postId}`);
+                    const data = await response.json();
+                    
+                    if (data.post) {
+                        this.renderPost(data.post);
+                    } else {
+                        this.postContent.innerHTML = '<p>Post not found.</p>';
+                    }
+                } catch (error) {
+                    console.error('Failed to load post:', error);
+                    this.postContent.innerHTML = '<p>Failed to load post.</p>';
+                }
+            }
+
+            async loadComments() {
+                try {
+                    const response = await fetch(`/api/v1/posts/${this.postId}/comments/recent?limit=50`);
+                    const data = await response.json();
+                    
+                    this.renderComments(data.comments || []);
+                } catch (error) {
+                    console.error('Failed to load comments:', error);
+                    this.commentsList.innerHTML = '<p>Failed to load comments.</p>';
+                }
+            }
+
+            connectWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws?username=${encodeURIComponent(this.currentUser)}&user_id=${this.userId}&room=${this.postId}&room_type=post`;
+                
+                this.updateConnectionStatus('connecting');
+                
+                this.ws = new WebSocket(wsUrl);
+
+                this.ws.onopen = () => {
+                    console.log('Connected to WebSocket for post comments');
+                    this.isConnected = true;
+                    this.updateConnectionStatus('connected');
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const wsEvent = JSON.parse(event.data);
+                        this.handleWebSocketEvent(wsEvent);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+
+                this.ws.onclose = () => {
+                    console.log('WebSocket connection closed');
+                    this.isConnected = false;
+                    this.updateConnectionStatus('disconnected');
+                    
+                    // Attempt to reconnect after 3 seconds
+                    setTimeout(() => {
+                        if (!this.isConnected) {
+                            this.connectWebSocket();
+                        }
+                    }, 3000);
+                };
+
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.updateConnectionStatus('disconnected');
+                };
+            }
+
+            handleWebSocketEvent(wsEvent) {
+                console.log('📨 Received WebSocket event:', wsEvent);
+                
+                if (wsEvent.type === 'POST_COMMENT') {
+                    // Create comment object from simplified event
+                    const comment = {
+                        id: Date.now(), // Generate temporary ID
+                        author_name: wsEvent.user,
+                        content: wsEvent.comment,
+                        created_at: new Date().toISOString()
+                    };
+                    this.addCommentToList(comment);
+                }
+            }
+
+            postComment() {
+                const content = this.commentInput.value.trim();
+                const authorName = this.authorNameInput.value.trim();
+
+                if (!content || !authorName || !this.isConnected) {
+                    return;
+                }
+
+                // Use simplified event format
+                const commentEvent = {
+                    type: 'POST_COMMENT',
+                    post_id: this.postId,
+                    user: authorName,
+                    comment: content
+                };
+
+                this.ws.send(JSON.stringify(commentEvent));
+                
+                // Clear form
+                this.commentInput.value = '';
+                
+                // Update localStorage
+                localStorage.setItem('username', authorName);
+                this.currentUser = authorName;
+            }
+
+            renderPost(post) {
+                this.postContent.innerHTML = `
+                    <div class="post-title">${this.escapeHtml(post.title)}</div>
+                    <div class="post-meta">
+                        By ${this.escapeHtml(post.author_name)} • 
+                        ${this.formatDate(post.created_at)} • 
+                        ${post.comment_count || 0} comments
+                    </div>
+                    <div class="post-content">${this.escapeHtml(post.content)}</div>
+                `;
+            }
+
+            renderComments(comments) {
+                if (comments.length === 0) {
+                    this.commentsList.innerHTML = '<p>No comments yet. Be the first to comment!</p>';
+                    return;
+                }
+
+                this.commentsList.innerHTML = comments.map(comment => 
+                    this.renderComment(comment)
+                ).join('');
+                
+                this.scrollCommentsToBottom();
+            }
+
+            renderComment(comment) {
+                return `
+                    <div class="comment" data-comment-id="${comment.id}">
+                        <div class="comment-header">
+                            <span class="comment-author">${this.escapeHtml(comment.author_name)}</span>
+                            <span class="comment-time">${this.formatDate(comment.created_at)}</span>
+                        </div>
+                        <div class="comment-content">${this.escapeHtml(comment.content)}</div>
+                    </div>
+                `;
+            }
+
+            addCommentToList(comment) {
+                const commentHtml = this.renderComment(comment);
+                this.commentsList.insertAdjacentHTML('beforeend', commentHtml);
+                this.scrollCommentsToBottom();
+            }
+
+            updateConnectionStatus(status) {
+                this.connectionStatus.className = `connection-status ${status}`;
+                
+                switch (status) {
+                    case 'connected':
+                        this.connectionStatus.textContent = 'Connected';
+                        break;
+                    case 'connecting':
+                        this.connectionStatus.textContent = 'Connecting...';
+                        break;
+                    case 'disconnected':
+                        this.connectionStatus.textContent = 'Disconnected';
+                        break;
+                }
+            }
+
+            scrollCommentsToBottom() {
+                this.commentsList.scrollTop = this.commentsList.scrollHeight;
+            }
+
+            formatDate(dateString) {
+                return new Date(dateString).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+        }
+
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new PostDetailApp();
+        });
+    </script>
+</body>
+</html>
