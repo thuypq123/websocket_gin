@@ -177,38 +177,74 @@ GET /api/v1/stats                       # WebSocket connection stats
 
 ```
 .
-├── cmd/server/                 # Application entry point
-│   └── main.go
-├── internal/
-│   ├── handlers/              # HTTP handlers
-│   │   ├── enhanced_routes.go # Route definitions
-│   │   ├── simple_chat.go     # Chat handlers
-│   │   └── post_handler.go    # Post handlers
-│   ├── repository/            # Data access layer
-│   │   ├── message_repository.go
-│   │   ├── comment_repository.go
-│   │   └── post_repository.go
-│   └── websocket/            # WebSocket implementation
-│       ├── hub.go            # WebSocket hub (connection manager)
-│       ├── client.go         # WebSocket client
-│       ├── connection.go     # Connection handling
-│       ├── event_router.go   # Event routing
-│       └── handlers/         # Event handlers
-│           ├── chat/         # Chat event handlers
-│           ├── comments/     # Comment event handlers
-│           ├── rooms/        # Room management
-│           └── shared/       # Shared types/interfaces
-├── templates/                # HTML templates
-│   ├── chat.html
-│   ├── post.html
-│   ├── posts.html
-│   └── index.html
-├── static/                   # Static assets
-│   ├── css/style.css
-│   ├── js/simple-chat-fixed.js
-│   └── test-websocket.html   # WebSocket testing tool
-├── pkg/database/             # Database utilities
-└── bin/                      # Compiled binaries
+├── cmd/server/                     # Application entry point
+│   └── main.go                     # Main application file
+├── internal/                       # Private application code
+│   ├── events/                     # Event system (legacy)
+│   │   ├── chat_handler.go
+│   │   ├── comment_handler.go
+│   │   ├── errors.go
+│   │   └── event_handler.go
+│   ├── handlers/                   # HTTP route handlers
+│   │   ├── enhanced_routes.go      # Main route definitions
+│   │   ├── simple_chat.go          # Chat HTTP handlers
+│   │   ├── post_handler.go         # Post management handlers
+│   │   ├── chat.go                 # Legacy chat handlers
+│   │   ├── mock_handler.go         # Mock data handlers
+│   │   └── routes.go               # Additional routes
+│   ├── models/                     # Data models
+│   │   ├── events.go               # Event structures
+│   │   ├── message.go              # Message model
+│   │   └── post.go                 # Post model
+│   ├── repository/                 # Data access layer
+│   │   ├── message_repository.go   # Message database operations
+│   │   ├── comment_repository.go   # Comment database operations
+│   │   └── post_repository.go      # Post database operations
+│   └── websocket/                  # WebSocket implementation
+│       ├── hub.go                  # WebSocket connection hub
+│       ├── hub_methods.go          # Hub method implementations
+│       ├── client.go               # WebSocket client structure
+│       ├── client_methods.go       # Client method implementations
+│       ├── connection.go           # Connection lifecycle management
+│       ├── event_router.go         # Event routing system
+│       ├── events.go               # Event type constants
+│       ├── utils.go                # WebSocket utilities
+│       └── handlers/               # Event handlers by domain
+│           ├── chat/               # Chat event handlers
+│           │   ├── handler.go      # Chat message handling
+│           │   └── validator.go    # Chat validation
+│           ├── comments/           # Comment event handlers
+│           │   ├── handler.go      # Comment handling
+│           │   └── validator.go    # Comment validation
+│           ├── rooms/              # Room management
+│           │   ├── handler.go      # Room operations
+│           │   └── validator.go    # Room validation
+│           └── shared/             # Shared handler utilities
+│               ├── types.go        # Common interfaces
+│               └── errors.go       # Custom error types
+├── pkg/                            # Public packages
+│   ├── config/                     # Configuration utilities
+│   └── database/                   # Database utilities
+│       ├── connection.go           # Database connection
+│       └── sample_data.go          # Sample data seeding
+├── templates/                      # HTML templates
+│   ├── index.html                  # Homepage template
+│   ├── chat.html                   # Chat interface
+│   ├── post.html                   # Single post view
+│   └── posts.html                  # Posts listing
+├── static/                         # Static web assets
+│   ├── css/
+│   │   └── style.css               # Main stylesheet
+│   ├── js/                         # JavaScript files
+│   │   ├── simple-chat-fixed.js    # Fixed chat client (active)
+│   │   ├── simple-chat.js          # Original chat client
+│   │   ├── chat.js                 # Legacy chat client
+│   │   └── websocket-adapter.js    # WebSocket utilities
+│   └── test-websocket.html         # WebSocket testing tool
+├── bin/                            # Compiled binaries (generated)
+│   └── server                      # Compiled server executable
+├── database.db                     # SQLite database file (generated)
+└── README.md                       # Project documentation
 ```
 
 ## 🧪 Testing
