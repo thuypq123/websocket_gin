@@ -29,9 +29,10 @@ func SetupEnhancedRoutes(
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/static", "./static")
 
-	// Initialize simple chat handler
+	// Initialize handlers
 	chatHandler := NewSimpleChatHandler(hub, messageRepo)
 	postHandler := NewPostHandler(postRepo, commentRepo)
+	websocketHandler := NewWebSocketHandler(hub, messageRepo, commentRepo)
 
 	// Frontend routes
 	r.GET("/", chatHandler.IndexPage)
@@ -47,8 +48,8 @@ func SetupEnhancedRoutes(
 		})
 	})
 
-	// WebSocket endpoint (supports both chat and post rooms)
-	r.GET("/ws", chatHandler.HandleWebSocket)
+	// WebSocket endpoint (universal - supports chat, comments, posts)
+	r.GET("/ws", websocketHandler.HandleWebSocket)
 
 	// API routes
 	api := r.Group("/api/v1")
@@ -74,7 +75,9 @@ func SetupEnhancedRoutes(
 		// Test endpoints for debugging
 		api.GET("/test/message", chatHandler.SendTestMessage)
 		api.GET("/test/comment", chatHandler.SendTestComment)
-		api.GET("/stats", chatHandler.GetStats)
+
+		// WebSocket statistics
+		api.GET("/ws/stats", websocketHandler.GetStats)
 
 		// Posts management (using mock for demo)
 		posts := api.Group("/posts")

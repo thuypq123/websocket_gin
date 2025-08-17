@@ -46,6 +46,7 @@ func (h *SimpleChatHandler) ChatPage(c *gin.Context) {
 }
 
 // HandleWebSocket handles WebSocket connections
+// DEPRECATED: Use WebSocketHandler instead for better separation of concerns
 func (h *SimpleChatHandler) HandleWebSocket(c *gin.Context) {
 	h.hub.HandleWebSocket(c)
 }
