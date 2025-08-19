@@ -19,4 +19,8 @@ type Client struct {
 	// Connection state
 	isConnected bool
 	mutex       sync.Mutex
+
+	// Multi-channel subscriptions
+	subscriptions map[string]bool // channel_name -> subscribed
+	subsMutex     sync.RWMutex    // Thread-safe access to subscriptions
 }

@@ -10,7 +10,17 @@ import (
 
 // Make Hub implement HubInterface
 func (h *Hub) JoinChatRoom(client shared.ClientInterface, roomName string) {
-	// Convert interface back to concrete type for internal operations
+	// New way: use channel subscription
+	channelName := fmt.Sprintf("chat:%s", roomName)
+	if err := h.SubscribeToChannel(client, channelName); err != nil {
+		log.Printf("❌ Failed to subscribe to chat room via channel: %v", err)
+		// Fallback to legacy way
+		h.legacyJoinChatRoom(client, roomName)
+	}
+}
+
+// legacyJoinChatRoom provides backward compatibility
+func (h *Hub) legacyJoinChatRoom(client shared.ClientInterface, roomName string) {
 	concreteClient, ok := client.(*Client)
 	if !ok {
 		log.Printf("❌ Invalid client type in JoinChatRoom")
@@ -25,11 +35,21 @@ func (h *Hub) JoinChatRoom(client shared.ClientInterface, roomName string) {
 	}
 	h.chatRooms[roomName][concreteClient] = true
 
-	log.Printf("👥 Client %s joined chat room: %s", client.GetUsername(), roomName)
+	log.Printf("👥 Client %s joined chat room: %s (legacy)", client.GetUsername(), roomName)
 }
 
 func (h *Hub) SubscribeToPost(client shared.ClientInterface, postID string) {
-	// Convert interface back to concrete type for internal operations
+	// New way: use channel subscription
+	channelName := fmt.Sprintf("post:%s", postID)
+	if err := h.SubscribeToChannel(client, channelName); err != nil {
+		log.Printf("❌ Failed to subscribe to post via channel: %v", err)
+		// Fallback to legacy way
+		h.legacySubscribeToPost(client, postID)
+	}
+}
+
+// legacySubscribeToPost provides backward compatibility
+func (h *Hub) legacySubscribeToPost(client shared.ClientInterface, postID string) {
 	concreteClient, ok := client.(*Client)
 	if !ok {
 		log.Printf("❌ Invalid client type in SubscribeToPost")
@@ -44,10 +64,21 @@ func (h *Hub) SubscribeToPost(client shared.ClientInterface, postID string) {
 	}
 	h.postSubscribers[postID][concreteClient] = true
 
-	log.Printf("📝 Client %s subscribed to post: %s", client.GetUsername(), postID)
+	log.Printf("📝 Client %s subscribed to post: %s (legacy)", client.GetUsername(), postID)
 }
 
 func (h *Hub) BroadcastToChatRoom(roomName string, event interface{}) {
+	// New way: broadcast to channel
+	channelName := fmt.Sprintf("chat:%s", roomName)
+	if err := h.BroadcastToChannel(channelName, event); err != nil {
+		log.Printf("❌ Failed to broadcast via channel, using legacy: %v", err)
+		// Fallback to legacy way
+		h.legacyBroadcastToChatRoom(roomName, event)
+	}
+}
+
+// legacyBroadcastToChatRoom provides backward compatibility
+func (h *Hub) legacyBroadcastToChatRoom(roomName string, event interface{}) {
 	h.roomsMutex.RLock()
 	roomClients := h.chatRooms[roomName]
 	h.roomsMutex.RUnlock()
@@ -73,10 +104,21 @@ func (h *Hub) BroadcastToChatRoom(roomName string, event interface{}) {
 		}
 	}
 
-	log.Printf("💬 Broadcasted chat message to room %s (%d clients)", roomName, len(roomClients))
+	log.Printf("💬 Broadcasted chat message to room %s (%d clients) (legacy)", roomName, len(roomClients))
 }
 
 func (h *Hub) BroadcastToPostSubscribers(postID string, event interface{}) {
+	// New way: broadcast to channel
+	channelName := fmt.Sprintf("post:%s", postID)
+	if err := h.BroadcastToChannel(channelName, event); err != nil {
+		log.Printf("❌ Failed to broadcast via channel, using legacy: %v", err)
+		// Fallback to legacy way
+		h.legacyBroadcastToPostSubscribers(postID, event)
+	}
+}
+
+// legacyBroadcastToPostSubscribers provides backward compatibility
+func (h *Hub) legacyBroadcastToPostSubscribers(postID string, event interface{}) {
 	h.postMutex.RLock()
 	postClients := h.postSubscribers[postID]
 	h.postMutex.RUnlock()
@@ -102,7 +144,7 @@ func (h *Hub) BroadcastToPostSubscribers(postID string, event interface{}) {
 		}
 	}
 
-	log.Printf("📝 Broadcasted comment to post %s (%d clients)", postID, len(postClients))
+	log.Printf("📝 Broadcasted comment to post %s (%d clients) (legacy)", postID, len(postClients))
 }
 
 func (h *Hub) SendToClient(client shared.ClientInterface, event interface{}) error {

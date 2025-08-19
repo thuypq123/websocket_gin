@@ -15,12 +15,18 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 
-	// Simple room management: room_name -> clients
-	chatRooms  map[string]map[*Client]bool
-	roomsMutex sync.RWMutex
+	// Unified channel system: channel_name -> clients
+	channels      map[string]map[*Client]bool
+	channelsMutex sync.RWMutex
 
-	// Post subscribers: post_id -> clients
+	// User connection mapping: username -> client (for direct messaging)
+	userConnections map[string]*Client
+	usersMutex      sync.RWMutex
+
+	// Legacy support (for backward compatibility)
+	chatRooms       map[string]map[*Client]bool
 	postSubscribers map[string]map[*Client]bool
+	roomsMutex      sync.RWMutex
 	postMutex       sync.RWMutex
 
 	// WebSocket upgrader
@@ -33,6 +39,8 @@ func NewHub() *Hub {
 		clients:         make(map[*Client]bool),
 		register:        make(chan *Client),
 		unregister:      make(chan *Client),
+		channels:        make(map[string]map[*Client]bool),
+		userConnections: make(map[string]*Client),
 		chatRooms:       make(map[string]map[*Client]bool),
 		postSubscribers: make(map[string]map[*Client]bool),
 		upgrader: websocket.Upgrader{
@@ -61,6 +69,28 @@ func (h *Hub) Run() {
 // handleClientRegister adds a new client
 func (h *Hub) handleClientRegister(client *Client) {
 	h.clients[client] = true
+	
+	// Initialize client subscriptions map
+	client.subsMutex.Lock()
+	if client.subscriptions == nil {
+		client.subscriptions = make(map[string]bool)
+	}
+	client.subsMutex.Unlock()
+	
+	// Register user connection for direct messaging
+	if client.username != "" {
+		h.usersMutex.Lock()
+		// Remove old connection if exists
+		if oldClient, exists := h.userConnections[client.username]; exists {
+			oldClient.mutex.Lock()
+			oldClient.isConnected = false
+			oldClient.mutex.Unlock()
+		}
+		h.userConnections[client.username] = client
+		h.usersMutex.Unlock()
+		log.Printf("👤 User %s registered for direct messaging", client.username)
+	}
+	
 	log.Printf("✅ Client %s connected", client.id)
 }
 
@@ -71,7 +101,28 @@ func (h *Hub) handleClientUnregister(client *Client) {
 		delete(h.clients, client)
 		close(client.send)
 
-		// Remove from all chat rooms
+		// Remove from unified channel system
+		h.channelsMutex.Lock()
+		for channelName, channelClients := range h.channels {
+			if _, exists := channelClients[client]; exists {
+				delete(channelClients, client)
+				if len(channelClients) == 0 {
+					delete(h.channels, channelName)
+				}
+			}
+		}
+		h.channelsMutex.Unlock()
+
+		// Remove from user connections
+		if client.username != "" {
+			h.usersMutex.Lock()
+			if h.userConnections[client.username] == client {
+				delete(h.userConnections, client.username)
+			}
+			h.usersMutex.Unlock()
+		}
+
+		// Legacy cleanup - Remove from all chat rooms
 		h.roomsMutex.Lock()
 		for roomName, roomClients := range h.chatRooms {
 			if _, exists := roomClients[client]; exists {
@@ -83,7 +134,7 @@ func (h *Hub) handleClientUnregister(client *Client) {
 		}
 		h.roomsMutex.Unlock()
 
-		// Remove from all post subscriptions
+		// Legacy cleanup - Remove from all post subscriptions
 		h.postMutex.Lock()
 		for postID, postClients := range h.postSubscribers {
 			if _, exists := postClients[client]; exists {
