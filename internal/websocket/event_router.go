@@ -55,7 +55,7 @@ func (r *EventRouter) routeEvent(client shared.ClientInterface, messageBytes []b
 		return r.chatHandler.HandleChatMessage(client, messageBytes)
 	case EventPostComment:
 		return r.commentHandler.HandlePostComment(client, messageBytes)
-	
+
 	// New subscription events
 	case EventSubscribe:
 		return r.subscriptionHandler.HandleSubscribe(client, messageBytes)
@@ -63,7 +63,7 @@ func (r *EventRouter) routeEvent(client shared.ClientInterface, messageBytes []b
 		return r.subscriptionHandler.HandleUnsubscribe(client, messageBytes)
 	case EventListSubscriptions:
 		return r.subscriptionHandler.HandleListSubscriptions(client, messageBytes)
-	
+
 	default:
 		return fmt.Errorf("unknown event type: %s", baseEvent.Type)
 	}

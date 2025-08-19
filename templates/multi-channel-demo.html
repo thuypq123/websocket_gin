@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Channel WebSocket Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+        }
+
+        .connection-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .status.connected {
+            background: #4caf50;
+        }
+
+        .status.connecting {
+            background: #ff9800;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #4facfe;
+            padding-bottom: 5px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #4facfe;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .quick-channels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .quick-channel-btn {
+            padding: 8px 12px;
+            background: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .quick-channel-btn:hover {
+            background: #4facfe;
+            color: white;
+        }
+
+        .subscriptions-list {
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .subscription-tag {
+            display: inline-block;
+            background: #4facfe;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .no-subscriptions {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .message-area {
+            flex: 1;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+        }
+
+        .message.received {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+        }
+
+        .message.sent {
+            background: #f3e5f5;
+            border-left-color: #9c27b0;
+        }
+
+        .message.system {
+            background: #fff3e0;
+            border-left-color: #ff9800;
+        }
+
+        .message.success {
+            background: #e8f5e8;
+            border-left-color: #4caf50;
+        }
+
+        .message.error {
+            background: #ffebee;
+            border-left-color: #f44336;
+        }
+
+        .message.warning {
+            background: #fff8e1;
+            border-left-color: #ffc107;
+        }
+
+        .message.info {
+            background: #e1f5fe;
+            border-left-color: #00bcd4;
+        }
+
+        .sender {
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .time {
+            float: right;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .message-input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .stats-area {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .stats-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .stat-item {
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+
+        .stat-item pre {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-channels {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Multi-Channel WebSocket Demo</h1>
+            <div class="connection-info">
+                <div>User: <strong id="currentUser">Not connected</strong></div>
+                <div id="connectionStatus" class="status connecting">Disconnected</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <!-- Channel Subscription Section -->
+                <div class="section">
+                    <h3>📡 Channel Management</h3>
+                    <div class="input-group">
+                        <input type="text" id="channelInput" placeholder="Enter channel name (e.g., chat:general)">
+                    </div>
+                    <div class="input-group">
+                        <button id="subscribeBtn" class="btn btn-primary">Subscribe</button>
+                        <button id="unsubscribeBtn" class="btn btn-secondary">Unsubscribe</button>
+                    </div>
+                    <button id="listSubscriptionsBtn" class="btn btn-success" style="width: 100%; margin-bottom: 15px;">List Subscriptions</button>
+                    
+                    <div class="help-text">
+                        <strong>Channel Format:</strong><br>
+                        • chat:room_name (e.g., chat:general)<br>
+                        • post:post_id (e.g., post:123)<br>
+                        • user:username (e.g., user:john)<br>
+                        • system:alerts
+                    </div>
+                </div>
+
+                <!-- Quick Channels -->
+                <div class="section">
+                    <h3>⚡ Quick Subscribe</h3>
+                    <div id="quickChannels" class="quick-channels">
+                        <button class="quick-channel-btn" data-channel="chat:general">chat:general</button>
+                        <button class="quick-channel-btn" data-channel="chat:tech">chat:tech</button>
+                        <button class="quick-channel-btn" data-channel="post:123">post:123</button>
+                        <button class="quick-channel-btn" data-channel="system:alerts">system:alerts</button>
+                    </div>
+                </div>
+
+                <!-- Current Subscriptions -->
+                <div class="section">
+                    <h3>📋 Active Subscriptions</h3>
+                    <div id="subscriptionsList" class="subscriptions-list">
+                        <span class="no-subscriptions">No active subscriptions</span>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="section">
+                    <h3>📊 Statistics</h3>
+                    <button id="statsBtn" class="btn btn-primary" style="width: 100%; margin-bottom: 15px;">Load Stats</button>
+                    <div id="statsArea"></div>
+                </div>
+            </div>
+
+            <div class="chat-area">
+                <h3>💬 Messages</h3>
+                <div id="messageArea" class="message-area"></div>
+                
+                <div class="message-input-area">
+                    <input type="text" id="messageInput" placeholder="Type message or /channel_name message">
+                    <button id="sendMessageBtn" class="btn btn-primary">Send</button>
+                </div>
+                
+                <div class="help-text">
+                    <strong>Message Format:</strong><br>
+                    • Regular message: "Hello world" (goes to chat:general)<br>
+                    • Channel message: "/chat:tech Hello tech team"<br>
+                    • Post comment: "/post:123 Nice post!"
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Username Modal -->
+    <div id="usernameModal" class="modal">
+        <div class="modal-content">
+            <h2>👋 Welcome!</h2>
+            <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="20">
+            <button id="usernameSubmit" class="btn btn-primary" style="width: 100%;">Connect</button>
+            <div class="help-text">
+                Choose a username to start using the multi-channel WebSocket demo.
+                You can subscribe to multiple channels and send messages to different channels.
+            </div>
+        </div>
+    </div>
+
+    <!-- Include WebSocket Adapter -->
+    <script src="/static/js/websocket-adapter.js"></script>
+    <script src="/static/js/multi-channel-demo.js"></script>
+</body>
+</html>

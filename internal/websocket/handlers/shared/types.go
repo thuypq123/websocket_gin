@@ -16,7 +16,7 @@ type HubInterface interface {
 	BroadcastToChatRoom(roomName string, event interface{})
 	BroadcastToPostSubscribers(postID string, event interface{})
 	SendToClient(client ClientInterface, event interface{}) error
-	
+
 	// New channel-based methods
 	SubscribeToChannel(client ClientInterface, channelName string) error
 	UnsubscribeFromChannel(client ClientInterface, channelName string) error

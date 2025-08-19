@@ -47,6 +47,12 @@ func SetupEnhancedRoutes(
 			"post_id": postID,
 		})
 	})
+	// NEW: Multi-channel demo page
+	r.GET("/demo", func(c *gin.Context) {
+		c.HTML(200, "multi-channel-demo.html", gin.H{
+			"title": "Multi-Channel WebSocket Demo",
+		})
+	})
 
 	// WebSocket endpoint (universal - supports chat, comments, posts)
 	r.GET("/ws", websocketHandler.HandleWebSocket)

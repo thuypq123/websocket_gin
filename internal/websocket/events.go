@@ -8,11 +8,11 @@ const (
 	EventPostComment = "POST_COMMENT"
 	EventRoomJoined  = "ROOM_JOINED"
 	EventError       = "ERROR"
-	
+
 	// New subscription events
-	EventSubscribe           = "SUBSCRIBE"
-	EventUnsubscribe         = "UNSUBSCRIBE"
-	EventListSubscriptions   = "LIST_SUBSCRIPTIONS"
+	EventSubscribe            = "SUBSCRIBE"
+	EventUnsubscribe          = "UNSUBSCRIBE"
+	EventListSubscriptions    = "LIST_SUBSCRIPTIONS"
 	EventSubscriptionResponse = "SUBSCRIPTION_RESPONSE"
 )
 
